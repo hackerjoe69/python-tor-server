@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Anonymous Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="cloud-server.png"/>
+
+    <style>
+      body {
+        overflow: hidden;
+      }
+      /* Floating animation */
+      @keyframes float {
+        0% { transform: translateY(0) rotate(0deg); opacity: 0.7; }
+        50% { transform: translateY(-30px) rotate(15deg); opacity: 1; }
+        100% { transform: translateY(0) rotate(0deg); opacity: 0.7; }
+      }
+      .floating {
+        position: absolute;
+        opacity: 0.6;
+        pointer-events: none;
+        animation: float linear infinite;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Floating icons container -->
+    <div id="floating-container" class="absolute inset-0 -z-10"></div>
+
+    <!-- Chat container -->
+    <div class="w-full max-w-lg bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 text-white relative z-10">
+      <!-- Header -->
+      <h1 class="text-2xl font-bold mb-4 text-center text-blue-400">⚡ Realtime Chat</h1>
+
+      <!-- Room Join -->
+      <div class="flex mb-4 gap-2">
+        <input id="room" type="text" value="main" 
+               class="flex-1 px-3 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+               placeholder="Room name"/>
+        <button id="connect" 
+                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition">Join</button>
+      </div>
+
+      <!-- Chat box -->
+      <div id="chat-box" class="h-64 overflow-y-auto bg-gray-800 rounded-xl p-3 mb-4 shadow-inner">
+        <ul id="log" class="space-y-2"></ul>
+      </div>
+
+      <!-- Message Input -->
+      <div class="flex gap-2">
+        <input id="msg" type="text" placeholder="Type a message..." 
+               class="flex-1 px-3 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        <button id="send" 
+                class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition">Send</button>
+      </div>
+    </div>
+
+    <script>
+      let ws;
+      const logEl = document.getElementById('log');
+      const chatBox = document.getElementById('chat-box');
+
+      function log(message, type="msg") {
+        const li = document.createElement('li');
+        li.textContent = message;
+        li.className = "fade-in px-3 py-2 rounded-lg w-fit max-w-[80%] break-words " + 
+                       (type === "system" ? "bg-gray-600 text-gray-200 mx-auto text-sm italic" : 
+                       type === "self" ? "bg-green-600 ml-auto" : "bg-blue-600");
+        logEl.appendChild(li);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      document.getElementById('connect').onclick = () => {
+        const room = document.getElementById('room').value || 'main';
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}/ws/${room}`);
+        ws.onopen = () => log(`✅ Connected to room "${room}"`, "system");
+        ws.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.payload?.text) {
+              log(`👤 ${data.payload.text}`);
+            } else {
+              log(e.data);
+            }
+          } catch {
+            log(e.data);
+          }
+        };
+        ws.onclose = () => log("❌ Disconnected", "system");
+        ws.onerror = () => log("⚠️ Connection error", "system");
+      };
+
+      document.getElementById('send').onclick = () => {
+        const val = document.getElementById('msg').value.trim();
+        if (!val) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) return alert('Not connected');
+        const payload = {text: val, ts: Date.now()};
+        ws.send(JSON.stringify(payload));
+        log(`You: ${val}`, "self");
+        document.getElementById('msg').value = '';
+      };
+
+      document.getElementById('msg').addEventListener("keypress", e => {
+        if (e.key === "Enter") document.getElementById('send').click();
+      });
+
+      // --- Floating Icons ---
+      const icons = [
+        "💻", "🖥️", "🌐", "🐍", "⚙️", "📡", "🔒", "📱", "🌍", "💀", "🛡️", "🛢️","❗", "🤖", "⏻"
+      ];
+      const floatingContainer = document.getElementById("floating-container");
+
+      function createFloatingIcon() {
+        const el = document.createElement("div");
+        el.textContent = icons[Math.floor(Math.random() * icons.length)];
+        el.className = "floating text-white/40";
+        el.style.left = Math.random() * 100 + "vw";
+        el.style.top = Math.random() * 100 + "vh";
+        const size = 24 + Math.random() * 40;
+        el.style.fontSize = size + "px";
+        const duration = 6 + Math.random() * 6;
+        el.style.animationDuration = duration + "s";
+        floatingContainer.appendChild(el);
+
+        // Remove after some time and respawn
+        setTimeout(() => {
+          floatingContainer.removeChild(el);
+          createFloatingIcon();
+        }, duration * 1000);
+      }
+
+      // Spawn multiple floating icons
+      for (let i = 0; i < 15; i++) {
+        setTimeout(createFloatingIcon, i * 800);
+      }
+    </script>
+  </body>
+</html>

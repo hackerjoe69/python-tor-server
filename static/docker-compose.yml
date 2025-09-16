@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: app
+    volumes:
+      - ./static:/app/static
+      - ./tor:/tor
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  tor:
+    image: dperson/torproxy
+    container_name: tor
+    restart: always
+    volumes:
+      - ./tor:/var/lib/tor/hidden_service
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    

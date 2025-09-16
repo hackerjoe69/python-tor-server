@@ -1,0 +1,10 @@
+# Tor Hidden Service configuration
+
+# Directory where Tor will store hidden service keys and hostname
+HiddenServiceDir /var/lib/tor/hidden_service/
+
+# Forward onion traffic to your FastAPI app (running inside docker on port 8000)
+HiddenServicePort 80 app:8000
+
+# Optional: enable logging
+Log notice stdout
